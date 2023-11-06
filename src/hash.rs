@@ -34,30 +34,24 @@ impl SM3Hasher {
         }
 
         msgv.extend(len.to_be_bytes().to_vec());
+        assert_eq!(msgv.len() % 64, 0);
         msgv
     }
 
-    //fn grp(&self) -> Vec<u32> {
-//
-    //}
-
-    fn block(&mut self, bi: [u8; 64]) -> ([u32; 68], [u32; 64]) {
+    fn update(&mut self, bi: [u8; 64]) {
         let mut w0 = [0u32; 68];
         let mut w1 = [0u32; 64];
-        // let k = u32::f
 
         for j in 0..16 {
             w0[j] = u32::from_be_bytes([
-                bi[j * 4], 
-                bi[j * 4 + 1], 
-                bi[j * 4 + 2], 
-                bi[j * 4 + 3]
+                bi[j * 4], bi[j * 4 + 1], 
+                bi[j * 4 + 2], bi[j * 4 + 3]
             ]);
         }
 
         for j in 16..68 {
-            w0[j] = p_1(w0[j - 16] ^ w0[j - 9] ^ w0[j - 3].rotate_left(15) ^ 
-                        w0[j - 13].rotate_left(7) ^ w0[j - 6]);
+            w0[j] = p_1(w0[j - 16] ^ w0[j - 9] ^ w0[j - 3].rotate_left(15)) ^
+                        w0[j - 13].rotate_left(7) ^ w0[j - 6];
         }
 
         for j in 0..64 {
@@ -81,6 +75,7 @@ impl SM3Hasher {
                 .rotate_left(j as u32)))
                 .rotate_left(7);
             let ss2 = ss1 ^ a.rotate_left(12);
+
             let tt1 = ff_j(j, a, b, c)
                 .wrapping_add(d)
                 .wrapping_add(ss2)
@@ -108,21 +103,35 @@ impl SM3Hasher {
         self.iv[5] ^= f;
         self.iv[6] ^= g;
         self.iv[7] ^= h;
-
-        (w0, w1)
     }
 
-    pub fn hashed(&self) -> [u8; 32] {
-        [0; 32]
-    }
+    pub fn hash(&mut self) -> String {
+        let msgv = self.pad();
+        let mut bi = [0u8; 64];
 
-    pub fn hash(&self) -> String {
-        String::from("OK!")
+        for grp in 0..(msgv.len() / 64) {
+            for i in (grp * 64)..(grp * 64 + 64) {
+                bi[i - grp * 64] = msgv[i]
+            }
+            self.update(bi);
+        }
+        
+        let mut resv: Vec<u8> = Vec::new();
+        for k in self.iv.iter() {
+            resv.extend(k.to_be_bytes().to_vec());
+        }
+
+        assert_eq!(resv.len(), 32);
+        hex::encode(resv)
     }
 }
 
-pub fn quick_sm3_hash(s: &str) -> String {
-    let hasher = SM3Hasher::new(s);
-    hasher.hash()
+pub fn sm3_hash(s: &str) -> String {
+    let mut hasher = SM3Hasher::new(s);
+    let hsh_res = hasher.hash();
+    println!("Text length: {}", s.len());
+    println!("Plain text: {}", s);
+    println!("Cipher text: {}\n", hsh_res);
+    hsh_res
 }
 

@@ -1,2 +1,2 @@
-pub mod sm3;
+pub mod hash;
 mod func;
