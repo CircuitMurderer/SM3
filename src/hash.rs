@@ -72,21 +72,21 @@ impl SM3Hasher {
 
         for j in 0..64 {
             let ss1 = (r[0]
-                            .rotate_left(12)
-                            .wrapping_add(r[4])
-                            .wrapping_add(t_j(j)
-                            .rotate_left(j as u32)))
-                            .rotate_left(7);
+                        .rotate_left(12)
+                        .wrapping_add(r[4])
+                        .wrapping_add(t_j(j)
+                        .rotate_left(j as u32)))
+                        .rotate_left(7);
             let ss2 = ss1 ^ r[0].rotate_left(12);
 
             let tt1 = ff_j(j, r[0], r[1], r[2])
-                            .wrapping_add(r[3])
-                            .wrapping_add(ss2)
-                            .wrapping_add(w1[j]);
+                        .wrapping_add(r[3])
+                        .wrapping_add(ss2)
+                        .wrapping_add(w1[j]);
             let tt2 = gg_j(j, r[4], r[5], r[6])
-                            .wrapping_add(r[7])
-                            .wrapping_add(ss1)
-                            .wrapping_add(w0[j]);
+                        .wrapping_add(r[7])
+                        .wrapping_add(ss1)
+                        .wrapping_add(w0[j]);
 
             r[3] = r[2];
             r[2] = r[1].rotate_left(9);
