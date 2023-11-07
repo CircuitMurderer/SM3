@@ -1,7 +1,7 @@
 #[inline]
 pub fn t_j(j: usize) -> u32 {
     if j >= 16 && j < 64 { 0x7a879d8au32 }
-    else if j < 16{ 0x79cc4519u32 }
+    else if j < 16 { 0x79cc4519u32 }
     else { 0x0u32 }
 }
 
