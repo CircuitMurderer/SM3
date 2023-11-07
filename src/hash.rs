@@ -1,9 +1,11 @@
-use crate::func::{p_0, p_1, t_j, ff_j, gg_j};
+use crate::func::{p_0, p_1, t_j, ff_j, gg_j, u8_to_hex};
+
 
 pub struct SM3Hasher {
-    iv: [u32; 8],
+    iv: Vec<u32>,
     pub msg: Vec<u8>,
 }
+
 
 impl SM3Hasher {
     pub fn new(val: &str) -> Self {
@@ -13,10 +15,10 @@ impl SM3Hasher {
         }
     }
 
-    fn constr_iv() -> [u32; 8] {
-        [
-            0x7380166f, 0x4914b2b9, 0x172442d7, 0xda8a0600, 
-            0xa96f30bc, 0x163138aa, 0xe38dee4d, 0xb0fb0e4e,
+    fn constr_iv() -> Vec<u32> {
+        vec![
+            0x7380166fu32, 0x4914b2b9u32, 0x172442d7u32, 0xda8a0600u32, 
+            0xa96f30bcu32, 0x163138aau32, 0xe38dee4du32, 0xb0fb0e4eu32,
         ]
     }
 
@@ -38,82 +40,79 @@ impl SM3Hasher {
         msgv
     }
 
-    fn update(&mut self, bi: [u8; 64]) {
+    fn update(&mut self, bi: &[u8]) {
         let mut w0 = [0u32; 68];
         let mut w1 = [0u32; 64];
 
         for j in 0..16 {
-            w0[j] = u32::from_be_bytes([
-                bi[j * 4], bi[j * 4 + 1], 
-                bi[j * 4 + 2], bi[j * 4 + 3]
-            ]);
+            w0[j] = u32::from_be_bytes(
+                (bi[(j * 4)..(j * 4 + 4)])
+                    .split_at(std::mem::size_of::<u32>())
+                    .0
+                    .try_into()
+                    .unwrap()
+            )
         }
 
         for j in 16..68 {
-            w0[j] = p_1(w0[j - 16] ^ w0[j - 9] ^ w0[j - 3].rotate_left(15)) ^
-                        w0[j - 13].rotate_left(7) ^ w0[j - 6];
+            w0[j] = p_1(w0[j - 16] ^ 
+                        w0[j - 9] ^ 
+                        w0[j - 3].rotate_left(15)) ^
+                        w0[j - 13].rotate_left(7) ^ 
+                        w0[j - 6];
         }
 
         for j in 0..64 {
             w1[j] = w0[j] ^ w0[j + 4];
         }
 
-        let mut a = self.iv[0];
-        let mut b = self.iv[1];
-        let mut c = self.iv[2];
-        let mut d = self.iv[3];
-        let mut e = self.iv[4];
-        let mut f = self.iv[5];
-        let mut g = self.iv[6];
-        let mut h = self.iv[7];
+        // a b c d e f g h
+        // 0 1 2 3 4 5 6 7
+        let mut r = self.iv.clone();
 
         for j in 0..64 {
-            let ss1 = (a
-                .rotate_left(12)
-                .wrapping_add(e)
-                .wrapping_add(t_j(j)
-                .rotate_left(j as u32)))
-                .rotate_left(7);
-            let ss2 = ss1 ^ a.rotate_left(12);
+            let ss1 = (r[0]
+                            .rotate_left(12)
+                            .wrapping_add(r[4])
+                            .wrapping_add(t_j(j)
+                            .rotate_left(j as u32)))
+                            .rotate_left(7);
+            let ss2 = ss1 ^ r[0].rotate_left(12);
 
-            let tt1 = ff_j(j, a, b, c)
-                .wrapping_add(d)
-                .wrapping_add(ss2)
-                .wrapping_add(w1[j]);
-            let tt2 = gg_j(j, e, f, g)
-                .wrapping_add(h)
-                .wrapping_add(ss1)
-                .wrapping_add(w0[j]);
+            let tt1 = ff_j(j, r[0], r[1], r[2])
+                            .wrapping_add(r[3])
+                            .wrapping_add(ss2)
+                            .wrapping_add(w1[j]);
+            let tt2 = gg_j(j, r[4], r[5], r[6])
+                            .wrapping_add(r[7])
+                            .wrapping_add(ss1)
+                            .wrapping_add(w0[j]);
 
-            d = c;
-            c = b.rotate_left(9);
-            b = a;
-            a = tt1;
-            h = g;
-            g = f.rotate_left(19);
-            f = e;
-            e = p_0(tt2);   
+            r[3] = r[2];
+            r[2] = r[1].rotate_left(9);
+            r[1] = r[0];
+            r[0] = tt1;
+            r[7] = r[6];
+            r[6] = r[5].rotate_left(19);
+            r[5] = r[4];
+            r[4] = p_0(tt2);   
         }
 
-        self.iv[0] ^= a;
-        self.iv[1] ^= b;
-        self.iv[2] ^= c;
-        self.iv[3] ^= d;
-        self.iv[4] ^= e;
-        self.iv[5] ^= f;
-        self.iv[6] ^= g;
-        self.iv[7] ^= h;
+        self.iv = self.iv
+                    .iter()
+                    .enumerate()
+                    .map(|(i, v)| r[i] ^ v)
+                    .collect();
     }
 
     pub fn hash(&mut self) -> String {
         let msgv = self.pad();
-        let mut bi = [0u8; 64];
 
-        for grp in 0..(msgv.len() / 64) {
-            for i in (grp * 64)..(grp * 64 + 64) {
-                bi[i - grp * 64] = msgv[i]
-            }
-            self.update(bi);
+        let mut to_u: &[u8];
+        let mut buf = msgv.split_at(0).1;
+        while buf.len() > 0 {
+            (to_u, buf) = buf.split_at(64);
+            self.update(to_u);
         }
         
         let mut resv: Vec<u8> = Vec::new();
@@ -122,13 +121,15 @@ impl SM3Hasher {
         }
 
         assert_eq!(resv.len(), 32);
-        hex::encode(resv)
+        u8_to_hex(&resv)
     }
 }
+
 
 pub fn sm3_hash(s: &str) -> String {
     let mut hasher = SM3Hasher::new(s);
     let hsh_res = hasher.hash();
+
     println!("Text length: {}", s.len());
     println!("Plain text: {}", s);
     println!("Cipher text: {}\n", hsh_res);
