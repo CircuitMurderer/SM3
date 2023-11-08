@@ -32,18 +32,13 @@ impl SM3Hasher {
 
         msgv.push(0x80);
         msgv.extend(vec![0x0u8; 56 - msgv.len() % 64]);
-        // for _ in 0..(56 - msgv.len() % 64) {
-        //    msgv.push(0x00);
-        //}
-
         msgv.extend(len.to_be_bytes().to_vec());
+        
         assert_eq!(msgv.len() % 64, 0);
         msgv
     }
 
     fn update(&mut self, bi: &[u8]) {
-        
-
         let mut w0: Vec<u32> = Vec::with_capacity(68);
         bi.chunks(4).for_each(|w| {
             w0.push(
