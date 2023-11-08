@@ -33,7 +33,7 @@ impl SM3Hasher {
         msgv.push(0x80);
         msgv.extend(vec![0x0u8; 56 - msgv.len() % 64]);
         msgv.extend(len.to_be_bytes().to_vec());
-        
+
         assert_eq!(msgv.len() % 64, 0);
         msgv
     }
@@ -115,9 +115,9 @@ impl SM3Hasher {
         }
         
         let mut resv: Vec<u8> = Vec::new();
-        for k in self.iv.iter() {
+        self.iv.iter().for_each(|k| {
             resv.extend(k.to_be_bytes().to_vec());
-        }
+        });
 
         assert_eq!(resv.len(), 32);
         u8_to_hex(&resv)
