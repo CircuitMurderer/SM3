@@ -34,12 +34,10 @@ pub fn p_1(x: u32) -> u32 {
 }
 
 
-pub fn u8_to_hex(arr: &Vec<u8>) -> String {
+pub fn build_hex(arr: &[u8]) -> String {
     let mut builder = String::with_capacity(arr.len() * 2);
-    for num in arr.iter() {
-        builder.push_str(
-            format!("{:0>2x}", num).as_str()
-        );
-    }
+    arr.iter().for_each(|num| {
+        builder += format!("{:0>2x}", num).as_str();
+    });
     builder
 }

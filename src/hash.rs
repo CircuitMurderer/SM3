@@ -1,4 +1,4 @@
-use crate::func::{p_0, p_1, t_j, ff_j, gg_j, u8_to_hex};
+use crate::func::{p_0, p_1, t_j, ff_j, gg_j, build_hex};
 
 
 pub struct SM3Hasher {
@@ -106,13 +106,9 @@ impl SM3Hasher {
 
     pub fn hash(&mut self) -> String {
         let msgv = self.pad();
-
-        let mut to_u: &[u8];
-        let mut buf = msgv.split_at(0).1;
-        while buf.len() > 0 {
-            (to_u, buf) = buf.split_at(64);
-            self.update(to_u);
-        }
+        msgv.chunks(64).for_each(|blk| {
+            self.update(blk);
+        });
         
         let mut resv: Vec<u8> = Vec::new();
         self.iv.iter().for_each(|k| {
@@ -120,7 +116,7 @@ impl SM3Hasher {
         });
 
         assert_eq!(resv.len(), 32);
-        u8_to_hex(&resv)
+        build_hex(resv.as_slice())
     }
 }
 
@@ -134,4 +130,3 @@ pub fn sm3_hash(s: &str) -> String {
     println!("Cipher text: {}\n", hsh_res);
     hsh_res
 }
-
