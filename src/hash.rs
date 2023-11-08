@@ -31,9 +31,10 @@ impl SM3Hasher {
         let len = (msgv.len() << 3) as u64;
 
         msgv.push(0x80);
-        for _ in 0..(56 - msgv.len() % 64) {
-            msgv.push(0x00);
-        }
+        msgv.extend(vec![0x0u8; 56 - msgv.len() % 64]);
+        // for _ in 0..(56 - msgv.len() % 64) {
+        //    msgv.push(0x00);
+        //}
 
         msgv.extend(len.to_be_bytes().to_vec());
         assert_eq!(msgv.len() % 64, 0);
@@ -41,30 +42,33 @@ impl SM3Hasher {
     }
 
     fn update(&mut self, bi: &[u8]) {
-        let mut w0 = [0u32; 68];
-        let mut w1 = [0u32; 64];
+        
 
-        for j in 0..16 {
-            w0[j] = u32::from_be_bytes(
-                (bi[(j * 4)..(j * 4 + 4)])
+        let mut w0: Vec<u32> = Vec::with_capacity(68);
+        bi.chunks(4).for_each(|w| {
+            w0.push(
+                u32::from_be_bytes(w
                     .split_at(std::mem::size_of::<u32>())
                     .0
                     .try_into()
                     .unwrap()
-            )
-        }
+                )
+            );
+        });
 
-        for j in 16..68 {
+        w0.extend(vec![0; 68 - 16]);
+        (16usize..68).for_each(|j| {
             w0[j] = p_1(w0[j - 16] ^ 
-                        w0[j - 9] ^ 
-                        w0[j - 3].rotate_left(15)) ^
-                        w0[j - 13].rotate_left(7) ^ 
-                        w0[j - 6];
-        }
+                w0[j - 9] ^ 
+                w0[j - 3].rotate_left(15)) ^
+                w0[j - 13].rotate_left(7) ^ 
+                w0[j - 6];
+        });
 
-        for j in 0..64 {
-            w1[j] = w0[j] ^ w0[j + 4];
-        }
+        let mut w1 = vec![0u32; 64];
+        w1 = w1.iter().enumerate().map(|(j, _)|
+            w0[j] ^ w0[j + 4]
+        ).collect();
 
         // a b c d e f g h
         // 0 1 2 3 4 5 6 7
