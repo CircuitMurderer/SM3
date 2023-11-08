@@ -51,13 +51,13 @@ impl SM3Hasher {
             );
         });
 
-        w0.extend(vec![0; 68 - 16]);
         (16usize..68).for_each(|j| {
-            w0[j] = p_1(w0[j - 16] ^ 
+            w0.push(p_1(w0[j - 16] ^ 
                 w0[j - 9] ^ 
                 w0[j - 3].rotate_left(15)) ^
                 w0[j - 13].rotate_left(7) ^ 
-                w0[j - 6];
+                w0[j - 6]
+            );
         });
 
         let mut w1 = vec![0u32; 64];
