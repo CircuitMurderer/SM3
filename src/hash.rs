@@ -1,6 +1,11 @@
 use crate::func::{p_0, p_1, t_j, ff_j, gg_j, build_hex};
 
 
+enum Regs {
+    A = 0, B, C, D, E, F, G, H
+}
+
+
 pub struct SM3Hasher {
     iv: Vec<u32>,
     pub msg: Vec<u8>,
@@ -70,31 +75,36 @@ impl SM3Hasher {
         let mut r = self.iv.clone();
 
         for j in 0..64 {
-            let ss1 = (r[0]
+            let ss1 = (r[Regs::A as usize]
                         .rotate_left(12)
-                        .wrapping_add(r[4])
+                        .wrapping_add(r[Regs::E as usize])
                         .wrapping_add(t_j(j)
                         .rotate_left(j as u32)))
                         .rotate_left(7);
-            let ss2 = ss1 ^ r[0].rotate_left(12);
 
-            let tt1 = ff_j(j, r[0], r[1], r[2])
-                        .wrapping_add(r[3])
+            let ss2 = ss1 ^ r[Regs::A as usize]
+                        .rotate_left(12);
+
+            let tt1 = ff_j(j, r[Regs::A as usize], 
+                        r[Regs::B as usize], r[Regs::C as usize])
+                        .wrapping_add(r[Regs::D as usize])
                         .wrapping_add(ss2)
                         .wrapping_add(w1[j]);
-            let tt2 = gg_j(j, r[4], r[5], r[6])
-                        .wrapping_add(r[7])
+
+            let tt2 = gg_j(j, r[Regs::E as usize], 
+                        r[Regs::F as usize], r[Regs::G as usize])
+                        .wrapping_add(r[Regs::H as usize])
                         .wrapping_add(ss1)
                         .wrapping_add(w0[j]);
 
-            r[3] = r[2];
-            r[2] = r[1].rotate_left(9);
-            r[1] = r[0];
-            r[0] = tt1;
-            r[7] = r[6];
-            r[6] = r[5].rotate_left(19);
-            r[5] = r[4];
-            r[4] = p_0(tt2);   
+            r[Regs::D as usize] = r[Regs::C as usize];
+            r[Regs::C as usize] = r[Regs::B as usize].rotate_left(9);
+            r[Regs::B as usize] = r[Regs::A as usize];
+            r[Regs::A as usize] = tt1;
+            r[Regs::H as usize] = r[Regs::G as usize];
+            r[Regs::G as usize] = r[Regs::F as usize].rotate_left(19);
+            r[Regs::F as usize] = r[Regs::E as usize];
+            r[Regs::E as usize] = p_0(tt2);   
         }
 
         self.iv = self.iv
