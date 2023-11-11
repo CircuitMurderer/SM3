@@ -120,7 +120,7 @@ impl SM3Hasher {
             self.update(blk);
         });
         
-        let mut resv: Vec<u8> = Vec::new();
+        let mut resv: Vec<u8> = Vec::with_capacity(32);
         self.iv.iter().for_each(|k| {
             resv.extend(k.to_be_bytes().to_vec());
         });
